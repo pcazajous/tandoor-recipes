@@ -5,7 +5,7 @@
         <div class="row mb-1" v-if="recipe.steps.length > 1">
             <div class="col col-md-8">
                 <h5 class="step__name text-primary" :class="stepClassNameType">
-                    {{ step_name }}
+                    {{ step?.step_recipe_data?.name ?? step_name }}
                     <small style="margin-left: 4px" class="step__time text-muted" v-if="step.time !== 0"><i
                         class="fas fa-user-clock"></i> {{ step_time }}</small>
                     <small v-if="start_time !== ''" class="step__start-time d-print-none">
@@ -75,17 +75,17 @@
                     <div class="card" v-if="step.step_recipe_data !== null">
                         <b-collapse id="collapse-1" :class="[details_visible ? 'step__details_visible':'step__details_visible_false']" v-model="details_visible">
                             <div class="card-body">
-                                <h2 class="card-title">
+                                <h6 class="card-title">
                                     <a :href="resolveDjangoUrl('view_recipe', step.step_recipe_data.id)">{{
                                             step.step_recipe_data.name
                                         }}</a>
-                                </h2>
+                                </h6>
                                 <div v-for="(sub_step, index) in step.step_recipe_data.steps"
                                      v-bind:key="`substep_${sub_step.id}`">
                                     <step-component
                                         :recipe="step.step_recipe_data"
                                         :step="sub_step"
-                                        :ingredient_factor="ingredient_factor"
+                                        :ingredient_factor="getSubStepFactor(step.ingredients)"
                                         :index="index"
                                         :start_time="start_time"
                                         :force_ingredients="true"
@@ -128,6 +128,7 @@ import IngredientsCard from "@/components/IngredientsCard"
 import Vue from "vue"
 import moment from "moment"
 import {ResolveUrlMixin, calculateHourMinuteSplit, EscapeCSSMixin} from "@/utils/utils"
+import {SUB_STEP_FACTOR} from "@/utils/constants";
 
 Vue.prototype.moment = moment
 
@@ -168,7 +169,7 @@ export default {
             classes['step__name_custom'] = !!this.step.name
             classes['step__name_custom_false'] = !this.step.name
             return classes
-        }
+        },
     },
     data() {
         return {
@@ -180,6 +181,12 @@ export default {
         this.set_time_input = moment(this.start_time).add(this.step.time_offset, "minutes").format("yyyy-MM-DDTHH:mm")
     },
     methods: {
+        getSubStepFactor: function(ingredients) {
+            const sub_step_factor = ingredients.find(i => {
+                return i.food?.name === SUB_STEP_FACTOR
+            });
+            return this.ingredient_factor * (sub_step_factor?.amount ?? 1)
+        },
         calculateAmount: function (x) {
             // used by the jinja2 template
             return calculateAmount(x, this.ingredient_factor)
