@@ -969,6 +969,7 @@ class Step(ExportModelOperationsMixin('step'), models.Model, PermissionModelMixi
     show_ingredients_table = models.BooleanField(default=True)
     search_vector = SearchVectorField(null=True)
     step_recipe = models.ForeignKey('Recipe', default=None, blank=True, null=True, on_delete=models.PROTECT)
+    step_recipe_factor = models.DecimalField(default=1, decimal_places=4, max_digits=16)
 
     space = models.ForeignKey(Space, on_delete=models.CASCADE)
     objects = ScopedManager(space='space')

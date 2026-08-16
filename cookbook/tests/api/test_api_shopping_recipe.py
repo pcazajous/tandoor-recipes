@@ -1,4 +1,5 @@
 import json
+from decimal import Decimal
 
 import pytest
 # work around for bug described here https://stackoverflow.com/a/70312265/15762829
@@ -7,7 +8,7 @@ from django.contrib import auth
 from django.urls import reverse
 from django_scopes import scopes_disabled
 
-from cookbook.models import Food, Ingredient, ShoppingListEntry, Household, UserSpace
+from cookbook.models import Food, Ingredient, ShoppingListEntry, ShoppingListRecipe, Household, UserSpace
 from cookbook.tests.factories import (MealPlanFactory, RecipeFactory,
                                       StepFactory, UserFactory)
 
@@ -127,3 +128,36 @@ def test_shopping_with_header_ingredient(u1_s1, recipe):
     u1_s1.put(reverse(SHOPPING_RECIPE_URL, args={recipe.id}))
     assert json.loads(u1_s1.get(reverse(SHOPPING_LIST_URL)).content)['count'] == 10
     assert json.loads(u1_s1.get(reverse('api:ingredient-list')).content)['count'] == 11
+
+
+def test_shopping_recipe_step_factor(u1_s1, space_1):
+    with scopes_disabled():
+        user = auth.get_user(u1_s1)
+        recipe1 = RecipeFactory(created_by=user, space=space_1, steps__count=1, steps__recipe_count=1)
+        step = recipe1.steps.get(step_recipe__isnull=False)
+        step.step_recipe_factor = Decimal('0.5')
+        step.save()
+        sub_recipe = step.step_recipe
+        sub_ingredients = sub_recipe.steps.first().ingredients.all()
+
+    u1_s1.put(reverse(SHOPPING_RECIPE_URL, args={recipe1.id}))
+    entries = json.loads(u1_s1.get(reverse(SHOPPING_LIST_URL)).content)['results']
+    assert len(entries) == 20
+    for i in sub_ingredients:
+        entry = next(e for e in entries if e['food']['id'] == i.food.id)
+        assert entry['amount'] == float(i.amount * Decimal('0.5'))
+
+    with scopes_disabled():
+        slr = ShoppingListRecipe.objects.get(recipe=recipe1)
+
+    # changing servings keeps the step recipe factor applied
+    r = u1_s1.patch(
+        reverse('api:shoppinglistrecipe-detail', args=[slr.id]),
+        {'servings': recipe1.servings * 2},
+        content_type='application/json'
+    )
+    assert r.status_code == 200
+    entries = json.loads(u1_s1.get(reverse(SHOPPING_LIST_URL)).content)['results']
+    for i in sub_ingredients:
+        entry = next(e for e in entries if e['food']['id'] == i.food.id)
+        assert entry['amount'] == float(i.amount * Decimal('2') * Decimal('0.5'))

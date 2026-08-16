@@ -7,7 +7,7 @@ from django.utils.translation import gettext as _
 
 from cookbook.connectors.connector_manager import ActionType, ConnectorManager
 from cookbook.helper.permission_helper import get_household_user_ids
-from cookbook.models import Ingredient, MealPlan, Recipe, ShoppingListEntry, ShoppingListRecipe, SupermarketCategoryRelation
+from cookbook.models import Ingredient, MealPlan, Recipe, ShoppingListEntry, ShoppingListRecipe, Step, SupermarketCategoryRelation
 
 
 def shopping_helper(qs, request):
@@ -69,6 +69,17 @@ class RecipeShoppingEditor():
     def _servings_factor(self):
         return Decimal(self.servings) / Decimal(self._recipe_servings)
 
+    def _get_step_recipe_factor(self, ingredient):
+        # factor used to scale the ingredients of a step recipe into the shopping list recipe
+        if not (self._shopping_list_recipe and self._shopping_list_recipe.recipe_id):
+            return Decimal(1)
+        sub_recipe_ids = list(ingredient.step_set.values_list('recipe__id', flat=True))
+        if not sub_recipe_ids:
+            return Decimal(1)
+        factor = Step.objects.filter(recipe__id=self._shopping_list_recipe.recipe_id, step_recipe_id__in=sub_recipe_ids).values_list('step_recipe_factor', flat=True).first()
+        if factor is not None:
+            return Decimal(factor)
+        return Decimal(1)
 
     @staticmethod
     def get_shopping_list_recipe(id, user, space):
@@ -125,7 +136,8 @@ class RecipeShoppingEditor():
                 related = self.recipe.get_related_recipes()
                 self._add_ingredients(self.get_recipe_ingredients(self.recipe.id, exclude_onhand=exclude_onhand).exclude(food__recipe__in=related))
                 for r in related:
-                    self._add_ingredients(self.get_recipe_ingredients(r.id, exclude_onhand=exclude_onhand).exclude(food__recipe__in=related))
+                    factor = Step.objects.filter(recipe=self.recipe, step_recipe=r).values_list('step_recipe_factor', flat=True).first()
+                    self._add_ingredients(self.get_recipe_ingredients(r.id, exclude_onhand=exclude_onhand).exclude(food__recipe__in=related), factor=factor)
             else:
                 self._add_ingredients(self.get_recipe_ingredients(self.recipe.id, exclude_onhand=exclude_onhand))
 
@@ -158,7 +170,7 @@ class RecipeShoppingEditor():
 
         for sle in ShoppingListEntry.objects.filter(list_recipe=self._shopping_list_recipe):
             if sle.ingredient: # TODO temporarily dont scale manual entries until ingredient_amount or some other base amount has been migrated to SLE
-                sle.amount = sle.ingredient.amount * Decimal(self._servings_factor)
+                sle.amount = sle.ingredient.amount * Decimal(self._servings_factor) * self._get_step_recipe_factor(sle.ingredient)
                 sle.save()
         self._shopping_list_recipe.servings = self.servings
         self._shopping_list_recipe.save()
@@ -171,11 +183,12 @@ class RecipeShoppingEditor():
         except BaseException:
             return False
 
-    def _add_ingredients(self, ingredients=None):
+    def _add_ingredients(self, ingredients=None, factor=None):
         if not ingredients:
             return
         elif isinstance(ingredients, list):
             ingredients = Ingredient.objects.filter(id__in=ingredients, food__ignore_shopping=False)
+        factor = factor if factor is not None else Decimal(1)
         existing = self._shopping_list_recipe.entries.filter(ingredient__in=ingredients).values_list('ingredient__pk', flat=True)
         add_ingredients = ingredients.exclude(id__in=existing)
 
@@ -186,7 +199,7 @@ class RecipeShoppingEditor():
                 food=i.food,
                 unit=i.unit,
                 ingredient=i,
-                amount=i.amount * Decimal(self._servings_factor),
+                amount=i.amount * Decimal(self._servings_factor) * factor,
                 created_by=self.created_by,
                 space=self.space,
             )

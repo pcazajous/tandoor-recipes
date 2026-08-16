@@ -1055,6 +1055,7 @@ class StepSerializer(WritableNestedModelSerializer, ExtendedRecipeMixin):
     instructions_markdown = serializers.SerializerMethodField('get_instructions_markdown')
     file = UserFileViewSerializer(allow_null=True, required=False)
     step_recipe_data = serializers.SerializerMethodField('get_step_recipe_data')
+    step_recipe_factor = CustomDecimalField(required=False)
     recipe_filter = 'steps'
 
     def create(self, validated_data):
@@ -1074,14 +1075,14 @@ class StepSerializer(WritableNestedModelSerializer, ExtendedRecipeMixin):
     def get_step_recipe_data(self, obj):
         # check if root type is recipe to prevent infinite recursion
         # can be improved later to allow multi level embedding
-        if obj.step_recipe and isinstance(self.parent.root, RecipeSerializer):
+        if obj.step_recipe and isinstance(getattr(self.parent, 'root', None), RecipeSerializer):
             return StepRecipeSerializer(obj.step_recipe, context={'request': self.context['request']}).data
 
     class Meta:
         model = Step
         fields = (
             'id', 'name', 'instruction', 'ingredients', 'instructions_markdown', 'time', 'order', 'show_as_header', 'file', 'step_recipe',
-            'step_recipe_data', 'numrecipe', 'show_ingredients_table'
+            'step_recipe_data', 'numrecipe', 'show_ingredients_table', 'step_recipe_factor'
         )
 
 

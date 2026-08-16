@@ -96,6 +96,12 @@ export interface Step {
     stepRecipe?: number | null;
     /**
      * 
+     * @type {number}
+     * @memberof Step
+     */
+    stepRecipeFactor?: number;
+    /**
+     * 
      * @type {any}
      * @memberof Step
      */
@@ -145,6 +151,7 @@ export function StepFromJSONTyped(json: any, ignoreDiscriminator: boolean): Step
         'showAsHeader': json['show_as_header'] == null ? undefined : json['show_as_header'],
         'file': json['file'] == null ? undefined : UserFileViewFromJSON(json['file']),
         'stepRecipe': json['step_recipe'] == null ? undefined : json['step_recipe'],
+        'stepRecipeFactor': json['step_recipe_factor'] == null ? undefined : json['step_recipe_factor'],
         'stepRecipeData': json['step_recipe_data'],
         'numrecipe': json['numrecipe'],
         'showIngredientsTable': json['show_ingredients_table'] == null ? undefined : json['show_ingredients_table'],
@@ -171,6 +178,7 @@ export function StepToJSONTyped(value?: Omit<Step, 'instructions_markdown'|'step
         'show_as_header': value['showAsHeader'],
         'file': UserFileViewToJSON(value['file']),
         'step_recipe': value['stepRecipe'],
+        'step_recipe_factor': value['stepRecipeFactor'],
         'show_ingredients_table': value['showIngredientsTable'],
     };
 }
