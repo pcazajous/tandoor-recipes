@@ -1,5 +1,7 @@
 import json
 
+from decimal import Decimal
+
 import pytest
 from django.contrib import auth
 from django.db.models import OuterRef, Subquery
@@ -7,6 +9,7 @@ from django.urls import reverse
 from django_scopes import scopes_disabled
 
 from cookbook.models import Ingredient, Step
+from cookbook.tests.factories import RecipeFactory, StepFactory
 
 LIST_URL = 'api:step-list'
 DETAIL_URL = 'api:step-detail'
@@ -164,3 +167,28 @@ def test_delete(u1_s1, u1_s2, a1_s1, recipe_1_s1):
 
         assert r.status_code == 204
         assert not Step.objects.filter(pk=s.id).exists()
+
+
+def test_step_recipe_factor_serialize_and_update(recipe_1_s1, u1_s1, space_1):
+    with scopes_disabled():
+        sub_recipe = RecipeFactory(space=space_1)
+        step = StepFactory(space=space_1, step_recipe=sub_recipe, ingredients__count=0)
+        step.step_recipe_factor = Decimal('0.5')
+        step.save()
+        recipe_1_s1.steps.add(step)
+
+    c = u1_s1
+    r = json.loads(c.get(reverse(DETAIL_URL, args={step.id})).content)
+    assert r['step_recipe_factor'] == 0.5
+
+    r = c.patch(
+        reverse(DETAIL_URL, args={step.id}),
+        {'step_recipe_factor': 0.25},
+        content_type='application/json'
+    )
+    assert r.status_code == 200
+    assert json.loads(r.content)['step_recipe_factor'] == 0.25
+
+    with scopes_disabled():
+        step.refresh_from_db()
+        assert step.step_recipe_factor == Decimal('0.25')

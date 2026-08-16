@@ -42,7 +42,7 @@
                         <v-btn icon="fa-solid fa-up-right-from-square" size="x-small" :to="{name: 'RecipeViewPage', params: {id: step.stepRecipeData.id}}" target="_blank" variant="plain"></v-btn>
                     </v-card-title>
                     <v-card-text class="mt-1" v-for="(subRecipeStep, subRecipeStepIndex) in step.stepRecipeData.steps" :key="subRecipeStep.id">
-                        <step-view v-model="step.stepRecipeData.steps[subRecipeStepIndex]" :step-number="subRecipeStepIndex+1" :ingredientFactor="ingredientFactor"></step-view>
+                        <step-view v-model="step.stepRecipeData.steps[subRecipeStepIndex]" :step-number="subRecipeStepIndex+1" :ingredientFactor="subRecipeFactor"></step-view>
                     </v-card-text>
                 </v-card>
             </template>
@@ -80,6 +80,10 @@ const props = defineProps({
 
 const timerRunning = ref(false)
 const stepChecked = ref(false)
+
+const subRecipeFactor = computed(() => {
+    return props.ingredientFactor * (step.value.stepRecipeFactor ?? 1)
+})
 
 const hasDetails = computed(() => {
     return step.value.ingredients.length > 0 || (step.value.instruction != undefined && step.value.instruction.length > 0) || step.value.stepRecipeData != undefined || step.value.file != undefined

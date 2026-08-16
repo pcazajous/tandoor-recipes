@@ -106,17 +106,21 @@ function loadRecipeData() {
 
             let allRecipes = [recipe.value].concat(relatedRecipes.value)
 
-            allRecipes.forEach(recipe => {
+            allRecipes.forEach(r => {
                 let dialogRecipe = {
-                    recipe: recipe,
+                    recipe: r,
                     entries: [] as ShoppingDialogRecipeEntry[]
                 } as ShoppingDialogRecipe
 
-                recipe.steps.forEach(step => {
+                const stepFactor = r.id === recipe.value.id
+                    ? 1
+                    : (recipe.value.steps.find(s => s.stepRecipe === r.id)?.stepRecipeFactor ?? 1)
+
+                r.steps.forEach(step => {
                     step.ingredients.forEach(ingredient => {
                         if (!ingredient.isHeader) {
                             dialogRecipe.entries.push({
-                                amount: ingredient.amount,
+                                amount: ingredient.amount * stepFactor,
                                 food: ingredient.food,
                                 unit: ingredient.unit,
                                 ingredient: ingredient,

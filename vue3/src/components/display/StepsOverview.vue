@@ -32,7 +32,7 @@
                                     :to="{name: 'RecipeViewPage', params: {id: s.stepRecipeData.id}}" target="_blank">
                                 <v-row v-for="subRecipeStep in s.stepRecipeData.steps">
                                     <v-col>
-                                        <ingredients-table v-model="subRecipeStep.ingredients" :ingredient-factor="props.ingredientFactor" show-actions
+                                        <ingredients-table v-model="subRecipeStep.ingredients" :ingredient-factor="props.ingredientFactor * (s.stepRecipeFactor ?? 1)" show-actions
                                         @scale="(factor: number) => emit('scale', factor)"></ingredients-table>
                                     </v-col>
                                 </v-row>
@@ -89,10 +89,11 @@ const mergedIngredients = computed(() => {
 
             // Add ingredients from step recipes if they exist
             if (step.stepRecipeData) {
+                const factor = step.stepRecipeFactor ?? 1
                 step.stepRecipeData.steps?.forEach((subStep: Step) => {
                     subStep.ingredients.forEach((ingredient: Ingredient) => {
                         if (ingredient.food && !ingredient.isHeader) {
-                            ingredients.push(ingredient);
+                            ingredients.push({...ingredient, amount: ingredient.amount * factor});
                         }
                     });
                 });
