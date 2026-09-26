@@ -51,7 +51,7 @@
                                   @update:modelValue="step.stepRecipe = (step.stepRecipeData != null) ? step.stepRecipeData.id! : null; if (step.stepRecipeFactor == undefined) step.stepRecipeFactor = 1"></v-model-select>
                 </v-col>
                 <v-col cols="12" md="6" v-if="step.stepRecipe != null">
-                    <v-number-input :label="$t('Recipe_Factor')" v-model="step.stepRecipeFactor" :min="0" :step="0.1" :precision="4" control-variant="split" hide-details></v-number-input>
+                    <v-number-input :label="$t('Recipe_Factor')" v-model="step.stepRecipeFactor" :min="0" :step="0.1" :precision="2" control-variant="split" hide-details></v-number-input>
                 </v-col>
                 <v-col cols="12" md="6" v-if="showFile || step.file != null">
                     <v-model-select model="UserFile" v-model="step.file"></v-model-select>
