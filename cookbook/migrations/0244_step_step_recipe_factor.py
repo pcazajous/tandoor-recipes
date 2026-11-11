@@ -4,7 +4,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('cookbook', '0242_space_household_setup_completed'),
+        ('cookbook', '0243_auto_20261018_1149'),
     ]
 
     operations = [
